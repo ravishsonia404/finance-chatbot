@@ -5,7 +5,7 @@ from transformers import pipeline
 st.write("Transformers version:", transformers.__version__)
 @st.cache_resource
 def load_model():
-    return pipeline("text-generation", model="google/flan-t5-small")
+    return pipeline("text2text-generation", model="t5-small")
 
 chatbot_ai = load_model()
 
