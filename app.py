@@ -2,6 +2,66 @@ import streamlit as st
 import pandas as pd
 import transformers
 from transformers import pipeline
+
+st.set_page_config(
+    page_title="SmartFinance AI",
+    layout="wide"
+)
+
+st.markdown("""
+<style>
+
+/* Background */
+.stApp {
+    background: linear-gradient(135deg, #0E1117, #1c1f2b);
+}
+
+/* Cards */
+.card {
+    background-color: #1E1E1E;
+    padding: 20px;
+    border-radius: 15px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+    margin-bottom: 20px;
+}
+
+/* Hover effect */
+.card:hover {
+    transform: scale(1.02);
+    transition: 0.3s;
+}
+
+/* Buttons */
+.stButton>button {
+    background-color: #4CAF50;
+    color: white;
+    border-radius: 10px;
+    padding: 10px 20px;
+}
+
+/* Input */
+.stTextInput>div>div>input {
+    background-color: #2A2A2A;
+    color: white;
+}
+
+</style>
+""", unsafe_allow_html=True)
+
+st.markdown("""
+<h1 style='text-align: center;'>💼 SmartFinance AI</h1>
+<p style='text-align: center; font-size:18px;'>
+Analyze your business finances in seconds using AI 🚀
+</p>
+""", unsafe_allow_html=True)
+
+st.divider()
+
+col1, col2, col3 = st.columns(3)
+
+col1.metric("💰 Revenue", "₹70,000", "+10%")
+col2.metric("📉 Expenses", "₹30,000", "-5%")
+col3.metric("📈 Profit", "₹40,000", "+15%")
 st.write("Transformers version:", transformers.__version__)
 @st.cache_resource
 def load_model():
