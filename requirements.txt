@@ -1,5 +1,5 @@
-streamlit
+streamlit==1.32.0
 transformers==4.40.0
 huggingface-hub==0.20.3
-torch
-pandas
+torch==2.2.0
+pandas==2.2.1
