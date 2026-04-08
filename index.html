@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>SmartFinance AI</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- CSS -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+
+<body>
+
+<!-- 🔐 LOGOUT -->
+<div style="text-align:right; padding:10px;">
+  <a href="/logout">Logout</a>
+</div>
+
+<!-- 🔥 HERO -->
+<section class="hero">
+  <h1>Analyze Your Business Finances in Seconds 🚀</h1>
+  <p>Upload your CSV and get instant insights</p>
+  <button onclick="scrollToUpload()">Upload File</button>
+</section>
+
+<!-- 💡 PROBLEM -->
+<section class="section">
+  <h2>Struggling with Business Finances? 😓</h2>
+  <p>Manual calculations take time and create confusion.</p>
+  <h3>Our AI solves it instantly 🤖</h3>
+</section>
+
+<!-- 📊 FEATURES -->
+<section class="section features">
+  <h2>Features</h2>
+  <div class="cards">
+    <div class="card">📂 Upload CSV</div>
+    <div class="card">📈 Revenue Analysis</div>
+    <div class="card">📉 Expense Tracking</div>
+    <div class="card">🤖 AI Insights</div>
+  </div>
+</section>
+
+<!-- 📂 UPLOAD -->
+<section class="section" id="upload">
+  <h2>Upload CSV</h2>
+
+  <form action="/analyze" method="POST" enctype="multipart/form-data">
+    <input type="file" name="file" required>
+    <button type="submit">Analyze</button>
+  </form>
+</section>
+
+<!-- 📊 RESULTS -->
+{% if revenue %}
+<section class="section">
+  <h2>Results 📊</h2>
+
+  <p>Revenue: ₹{{ revenue }}</p>
+  <p>Expenses: ₹{{ expenses }}</p>
+  <p>Profit: ₹{{ profit }}</p>
+
+  <h3>{{ insight }}</h3>
+
+  <!-- 📊 CHART -->
+  <canvas id="financeChart" width="300" height="150"></canvas>
+</section>
+
+<script>
+var ctx = document.getElementById('financeChart');
+
+new Chart(ctx, {
+    type: 'bar',
+    data: {
+        labels: ['Revenue', 'Expenses', 'Profit'],
+        datasets: [{
+            label: 'Finance Data',
+            data: [
+                {{ revenue|default(0) }},
+                {{ expenses|default(0) }},
+                {{ profit|default(0) }}
+            ]
+        }]
+    }
+});
+</script>
+{% endif %}
+
+<!-- 📞 CTA -->
+<section class="cta">
+  <h2>Start Your Financial Analysis Today 🚀</h2>
+</section>
+
+<script>
+function scrollToUpload() {
+  document.getElementById("upload").scrollIntoView({ behavior: "smooth" });
+}
+</script>
+
+</body>
+</html>

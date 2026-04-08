@@ -1,183 +1,107 @@
-import streamlit as st
+from flask import Flask, render_template, request, redirect, session
+from flask_sqlalchemy import SQLAlchemy
 import pandas as pd
-import transformers
-from transformers import pipeline
 
-st.set_page_config(
-    page_title="SmartFinance AI",
-    layout="wide"
-)
+app = Flask(__name__)
+app.secret_key = "supersecretkey123"
 
-st.markdown("""
-<style>
+# DATABASE
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///users.db'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+db = SQLAlchemy(app)
 
-/* Background */
-.stApp {
-    background: linear-gradient(135deg, #0E1117, #1c1f2b);
-}
+# USER MODEL
+class User(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(100), unique=True)
+    password = db.Column(db.String(100))
 
-/* Cards */
-.card {
-    background-color: #1E1E1E;
-    padding: 20px;
-    border-radius: 15px;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.5);
-    margin-bottom: 20px;
-}
+# CREATE DB
+with app.app_context():
+    db.create_all()
 
-/* Hover effect */
-.card:hover {
-    transform: scale(1.02);
-    transition: 0.3s;
-}
+# HOME
+@app.route('/')
+def home():
+    if 'user' in session:
+        return render_template("index.html")
+    return redirect('/login')
 
-/* Buttons */
-.stButton>button {
-    background-color: #4CAF50;
-    color: white;
-    border-radius: 10px;
-    padding: 10px 20px;
-}
+# REGISTER
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    if request.method == 'POST':
+        username = request.form.get('username')
+        password = request.form.get('password')
 
-/* Input */
-.stTextInput>div>div>input {
-    background-color: #2A2A2A;
-    color: white;
-}
+        existing_user = User.query.filter_by(username=username).first()
+        if existing_user:
+            return "⚠️ User already exists"
 
-</style>
-""", unsafe_allow_html=True)
+        new_user = User(username=username, password=password)
+        db.session.add(new_user)
+        db.session.commit()
 
-st.markdown("""
-<h1 style='text-align: center;'>💼 SmartFinance AI</h1>
-<p style='text-align: center; font-size:18px;'>
-Analyze your business finances in seconds using AI 🚀
-</p>
-""", unsafe_allow_html=True)
+        return redirect('/login')
 
-st.divider()
+    return render_template("register.html")
 
-col1, col2, col3 = st.columns(3)
+# LOGIN
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        username = request.form.get('username')
+        password = request.form.get('password')
 
-col1.metric("💰 Revenue", "₹70,000", "+10%")
-col2.metric("📉 Expenses", "₹30,000", "-5%")
-col3.metric("📈 Profit", "₹40,000", "+15%")
-st.write("Transformers version:", transformers.__version__)
-@st.cache_resource
-def load_model():
-    return pipeline("text2text-generation", model="t5-small")
+        user = User.query.filter_by(username=username).first()
 
-chatbot_ai = load_model()
+        if user and user.password == password:
+            session['user'] = user.username
+            return redirect('/')
+        else:
+            return "❌ Invalid credentials"
 
-st.title("Business Finance Chatbot")
+    return render_template("login.html")
 
-df = pd.read_csv("data1.csv")
+# LOGOUT
+@app.route('/logout')
+def logout():
+    session.pop('user', None)
+    return redirect('/login')
 
-st.subheader("Upload your file")
-uploaded_file = st.file_uploader("Upload CSV", type=["csv"])
+# ANALYZE CSV
+@app.route('/analyze', methods=['POST'])
+def analyze():
+    if 'user' not in session:
+        return redirect('/login')
 
-if uploaded_file is not None:
-    df = pd.read_csv(uploaded_file)
-    st.success("File uploaded successfully")
-else:
-    df = pd.read_csv("data1.csv")
+    file = request.files.get('file')
 
-st.subheader("Data Preview")
+    if not file:
+        return "⚠️ No file uploaded"
 
-st.write(df)
+    df = pd.read_csv(file)
 
-revenue = df[df['Type'] == 'income']['Amount'].sum()
-expense = df[df['Type'] == 'expense']['Amount'].sum()
-profit = revenue - expense
+    # Clean column names
+    df.columns = df.columns.str.strip().str.lower()
 
-category_expense = df[df['Type'] == 'expense'].groupby('Category')['Amount'].sum()
-st.subheader("Expense by Category")
-st.write(category_expense)
+    if 'revenue' not in df.columns or 'expenses' not in df.columns:
+        return "❌ CSV must contain 'Revenue' and 'Expenses' columns"
 
-highest_category = category_expense.idxmax()
-highest_value = category_expense.max()
+    revenue = df['revenue'].sum()
+    expenses = df['expenses'].sum()
+    profit = revenue - expenses
 
-st.warning(f"Highest spending is on {highest_category}: {highest_value}")
-
-st.subheader("Business Insight")
-
-if highest_value > (expense * 0.5):
-    st.error("Too much spending on {highest_category} !")
-else:
-    st.success("Spending is under control")
-
-if profit < 10000:
-    st.warning("Profit is low, improve business")
-
-st.subheader("Financial Summary")
-st.write("Revenue:", revenue)
-st.write("Expenses:", expense)
-st.write("Profit:", profit)
-
-
-if profit > 0:
-    st.success("Business is in Profit")
-else:
-    st.error("Business is in Loss")
-
-def detect_intent(text):
-    text = text.lower()
-
-    if "increase" in text and "profit" in text:
-        return "increase_profit"
-    elif "profit" in text:
-        return "show_profit"
-    elif "expense" in text and ("reduce" in text or "decrease" in text):
-        return "reduce_expense"
-    elif "expense" in text:
-        return "show_expense"
-    elif "revenue" in text or "income" in text:
-        return "show_revenue"
-    elif "highest" in text or "spending" in text:
-        return "highest_expense"
+    if profit > 0:
+        insight = "✅ Your business is in profit"
     else:
-        return "unknown"
+        insight = "⚠️ Your business is in loss"
 
-st.subheader("Smart Finance Chatbot")
-user_input = st.text_input("Ask your business question...")
+    return render_template("index.html",
+                           revenue=revenue,
+                           expenses=expenses,
+                           profit=profit,
+                           insight=insight)
 
-if user_input:
-    st.write("You:", user_input)
-    intent = detect_intent(user_input)
-
-    if intent == "show_profit":
-        response = f"Your profit is {profit}"
-
-    elif intent == "show_expense":
-        response = f"Your expense is {expense}"
-    elif intent == "show_revenue":
-        response = f"Your revenue is {revenue}"
-    elif intent == "highest_expense":
-        response = f"Highest spending is on {highest_category}: {highest_value}"
-    elif intent == "increase_profit":
-        response = f"""To increase profit
-- Reduce expenses {expense}
-- Increase revenues {revenue}
-- Focus on {highest_category}"""
-    else:
-        ai_output = chatbot_ai(f"You are the finance expert.Answer clearly: {user_input}",
-                               max_length=50,
-                               num_return_sequences=1,
-                               truncation=True
-                               )
-        # response = ai_output[0]['generated_text'].split(".")[0]
-        prompt = f"""
-        You are a smart business advisor AI.
-
-        User Question: {user_input}
-
-        Give a clear, helpful, and practical answer in simple points.
-        """
-
-        response = chatbot_ai(prompt, max_length=200, do_sample=True)
-        print(response[0]['generated_text'])
-        # response = f"I can help with profit, expense, and business insights!"
-
-    st.write("AI:", response)
-
-
+if __name__ == '__main__':
+    app.run(debug=True)
